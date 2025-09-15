@@ -60,6 +60,16 @@ async def root(request: Request):
         }
     )
 
+@app.get("/live", response_class=HTMLResponse)
+async def live_detection(request: Request):
+    return templates.TemplateResponse(
+        "live.html",
+        {
+            "request": request,
+            "known_faces": known_face_names
+        }
+    )
+
 @app.post("/recognize")
 async def recognize_face(file: UploadFile = File(...)):
     try:

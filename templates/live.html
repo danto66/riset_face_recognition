@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}Live Face Detection{% endblock %}
+
+{% block header %}Live Face Detection{% endblock %}
+
+{% block content %}
+<div class="navigation">
+    <a href="/" class="nav-link">📸 Manual Detection</a>
+    <a href="/live" class="nav-link active">🔴 Live Detection</a>
+</div>
+
+<div class="camera-section">
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+</div>
+
+<div class="controls">
+    <button onclick="toggleDetection()" id="toggleBtn" class="btn-primary">
+        Start Live Detection
+    </button>
+    <button onclick="captureFrame()" id="captureBtn" class="btn-secondary" disabled>
+        📷 Capture Current Frame
+    </button>
+</div>
+
+<div class="status-section">
+    <div class="status-indicator">
+        <span id="statusDot" class="status-dot stopped"></span>
+        <span id="statusText">Detection Stopped</span>
+        <span id="fpsCounter" class="fps-counter">FPS: 0</span>
+    </div>
+</div>
+
+<div id="result" class="result-section live-result">
+    <div class="info">
+        Click "Start Live Detection" to begin automatic face recognition
+    </div>
+</div>
+
+<div class="info-section">
+    <h3>Detection Settings</h3>
+    <div class="settings">
+        <label>
+            Detection Interval:
+            <select id="intervalSelect" onchange="updateInterval()">
+                <option value="1000">1 second</option>
+                <option value="2000" selected>2 seconds</option>
+                <option value="3000">3 seconds</option>
+                <option value="5000">5 seconds</option>
+            </select>
+        </label>
+
+        <label>
+            <input type="checkbox" id="showUnknown" checked onchange="updateSettings()">
+            Show unknown faces
+        </label>
+
+        <label>
+            Confidence Threshold:
+            <input type="range" id="confidenceThreshold" min="0" max="1" step="0.1" value="0.6" onchange="updateSettings()">
+            <span id="confidenceValue">60%</span>
+        </label>
+    </div>
+
+    <h3>Known Faces</h3>
+    <div class="known-faces">
+        {% for face in known_faces %}
+        <div class="face-card">
+            <span class="face-name">{{ face }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="actions">
+        <button onclick="reloadFaces()" class="btn-secondary">
+            Reload Faces
+        </button>
+    </div>
+</div>
+
+<style>
+.navigation {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.nav-link {
+    padding: 10px 20px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.nav-link:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: 2px solid #667eea;
+}
+
+.status-section {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+.status-dot.running {
+    background: #28a745;
+}
+
+.status-dot.stopped {
+    background: #dc3545;
+    animation: none;
+}
+
+.fps-counter {
+    background: #f8f9fa;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.live-result {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.settings {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.settings label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+
+.settings select, .settings input[type="range"] {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.detection-result {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.detection-result.known {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    border-color: #b8daff;
+}
+
+.detection-result.unknown {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border-color: #ffc107;
+}
+
+.face-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.face-name {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.face-confidence {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+.timestamp {
+    font-size: 12px;
+    color: #6c757d;
+    text-align: center;
+    margin-top: 5px;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+    .settings {
+        gap: 10px;
+    }
+
+    .settings label {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .status-indicator {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/live.js') }}"></script>
+{% endblock %}

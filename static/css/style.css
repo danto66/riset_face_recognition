@@ -180,6 +180,43 @@ footer {
     opacity: 0.8;
 }
 
+.navigation {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.nav-link {
+    padding: 10px 20px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.nav-link:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border: 2px solid #667eea;
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(45deg, #c82333, #bd2130);
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;

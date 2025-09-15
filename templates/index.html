@@ -3,6 +3,11 @@
 {% block title %}Face Recognition - Home{% endblock %}
 
 {% block content %}
+<div class="navigation">
+    <a href="/" class="nav-link active">📸 Manual Detection</a>
+    <a href="/live" class="nav-link">🔴 Live Detection</a>
+</div>
+
 <div class="camera-section">
     <video id="video" width="640" height="480" autoplay></video>
     <canvas id="canvas" width="640" height="480"></canvas>
