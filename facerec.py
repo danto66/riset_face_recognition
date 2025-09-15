@@ -1,3 +1,5 @@
+import glob
+import os
 import face_recognition
 import cv2
 import numpy as np
@@ -12,17 +14,38 @@ import numpy as np
 # Get a reference to webcam #0 (the default one)
 video_capture = cv2.VideoCapture(0)
 
-# Load a sample picture and learn how to recognize it.
-danang_image = face_recognition.load_image_file("images/danang.jpg")
-danang_face_encoding = face_recognition.face_encodings(danang_image)[0]
+# Load known faces at startup
+known_face_encodings = []
+known_face_names = []
 
-# Create arrays of known face encodings and their names
-known_face_encodings = [
-    danang_face_encoding,
-]
-known_face_names = [
-    "danang",
-]
+def load_known_faces():
+    global known_face_encodings, known_face_names
+    known_face_encodings = []
+    known_face_names = []
+
+    # Load all images from images directory
+    image_files = glob.glob("images/*.jpg") + glob.glob("images/*.jpeg") + glob.glob("images/*.png")
+
+    for image_path in image_files:
+        try:
+            # Get name from filename (without extension)
+            name = os.path.splitext(os.path.basename(image_path))[0]
+
+            # Load and encode face
+            image = face_recognition.load_image_file(image_path)
+            face_encodings = face_recognition.face_encodings(image)
+
+            if face_encodings:  # If at least one face found
+                known_face_encodings.append(face_encodings[0])
+                known_face_names.append(name)
+                print(f"Loaded face: {name}")
+            else:
+                print(f"No face found in {image_path}")
+
+        except Exception as e:
+            print(f"Error loading {image_path}: {e}")
+
+load_known_faces()
 
 while True:
     # Grab a single frame of video
