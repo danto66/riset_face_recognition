@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Face Recognition - Home{% endblock %}
+
+{% block content %}
+<div class="camera-section">
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+</div>
+
+<div class="controls">
+    <button onclick="captureAndSubmit()" id="submitBtn" class="btn-primary">
+        Submit Frame
+    </button>
+</div>
+
+<div id="result" class="result-section"></div>
+
+<div class="info-section">
+    <h3>Known Faces</h3>
+    <div class="known-faces">
+        {% for face in known_faces %}
+        <div class="face-card">
+            <span class="face-name">{{ face }}</span>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="actions">
+        <button onclick="reloadFaces()" class="btn-secondary">
+            Reload Faces
+        </button>
+    </div>
+</div>
+{% endblock %}

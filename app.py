@@ -1,16 +1,20 @@
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import face_recognition
 import cv2
 import numpy as np
-import base64
 import os
 import glob
-from io import BytesIO
-from PIL import Image
 
 app = FastAPI()
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Setup templates
+templates = Jinja2Templates(directory="templates")
 
 # Load known faces at startup
 known_face_encodings = []
@@ -47,148 +51,14 @@ def load_known_faces():
 load_known_faces()
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Face Recognition Web App</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                max-width: 800px;
-                margin: 0 auto;
-                padding: 20px;
-                text-align: center;
-            }
-            #video {
-                border: 2px solid #ccc;
-                border-radius: 10px;
-                margin: 20px 0;
-            }
-            #canvas {
-                display: none;
-            }
-            button {
-                background-color: #4CAF50;
-                color: white;
-                padding: 15px 30px;
-                font-size: 16px;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                margin: 10px;
-            }
-            button:hover {
-                background-color: #45a049;
-            }
-            button:disabled {
-                background-color: #cccccc;
-                cursor: not-allowed;
-            }
-            #result {
-                margin-top: 20px;
-                padding: 20px;
-                border-radius: 10px;
-                min-height: 50px;
-            }
-            .success {
-                background-color: #d4edda;
-                border: 1px solid #c3e6cb;
-                color: #155724;
-            }
-            .error {
-                background-color: #f8d7da;
-                border: 1px solid #f5c6cb;
-                color: #721c24;
-            }
-            .info {
-                background-color: #d1ecf1;
-                border: 1px solid #bee5eb;
-                color: #0c5460;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Face Recognition Web App</h1>
-
-        <video id="video" width="640" height="480" autoplay></video>
-        <canvas id="canvas" width="640" height="480"></canvas>
-
-        <br>
-        <button onclick="captureAndSubmit()" id="submitBtn">Submit Frame</button>
-
-        <div id="result"></div>
-
-        <script>
-            const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            const submitBtn = document.getElementById('submitBtn');
-            const result = document.getElementById('result');
-
-            // Access webcam
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    video.srcObject = stream;
-                })
-                .catch(err => {
-                    console.error('Error accessing webcam:', err);
-                    result.innerHTML = '<div class="error">Error: Could not access webcam</div>';
-                });
-
-            async function captureAndSubmit() {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Processing...';
-                result.innerHTML = '<div class="info">Processing frame...</div>';
-
-                try {
-                    // Draw current video frame to canvas
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-                    // Convert canvas to blob
-                    canvas.toBlob(async (blob) => {
-                        const formData = new FormData();
-                        formData.append('file', blob, 'frame.jpg');
-
-                        try {
-                            const response = await fetch('/recognize', {
-                                method: 'POST',
-                                body: formData
-                            });
-
-                            const data = await response.json();
-
-                            if (response.ok) {
-                                if (data.faces && data.faces.length > 0) {
-                                    let resultText = `<div class="success"><strong>Faces detected:</strong><br>`;
-                                    data.faces.forEach(face => {
-                                        resultText += `• ${face.name} (confidence: ${(face.confidence * 100).toFixed(1)}%)<br>`;
-                                    });
-                                    resultText += `</div>`;
-                                    result.innerHTML = resultText;
-                                } else {
-                                    result.innerHTML = '<div class="info">No known faces detected</div>';
-                                }
-                            } else {
-                                result.innerHTML = `<div class="error">Error: ${data.detail}</div>`;
-                            }
-                        } catch (error) {
-                            result.innerHTML = `<div class="error">Network error: ${error.message}</div>`;
-                        }
-                    }, 'image/jpeg', 0.8);
-
-                } catch (error) {
-                    result.innerHTML = `<div class="error">Capture error: ${error.message}</div>`;
-                } finally {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Submit Frame';
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
+async def root(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "known_faces": known_face_names
+        }
+    )
 
 @app.post("/recognize")
 async def recognize_face(file: UploadFile = File(...)):
