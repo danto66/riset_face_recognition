@@ -20,13 +20,18 @@ templates = Jinja2Templates(directory="templates")
 known_face_encodings = []
 known_face_names = []
 
-def load_known_faces():
+def load_known_faces(id = ""):
     global known_face_encodings, known_face_names
     known_face_encodings = []
     known_face_names = []
 
-    # Load all images from images directory
-    image_files = glob.glob("images/*.jpg") + glob.glob("images/*.jpeg") + glob.glob("images/*.png")
+    if id:
+        image_files = glob.glob(f"images/{id}/*.jpg") + glob.glob(f"images/{id}/*.jpeg") + glob.glob(f"images/{id}/*.png")
+        if not image_files:
+            raise ValueError(f"No images found for ID '{id}'")
+    else:
+        # Load all images from images directory
+        image_files = glob.glob("images/*.jpg") + glob.glob("images/*.jpeg") + glob.glob("images/*.png")
 
     for image_path in image_files:
         try:
@@ -48,7 +53,7 @@ def load_known_faces():
             print(f"Error loading {image_path}: {e}")
 
 # Load faces when app starts
-load_known_faces()
+# load_known_faces()
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -120,6 +125,75 @@ async def recognize_face(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Processing error: {str(e)}"}
 
+@app.post("/recognize/{id}")
+async def recognize_face_by_id(id: str, file: UploadFile = File(...)):
+    global known_face_encodings, known_face_names
+
+    try:
+        dir_path = f"images/{id}"
+
+        if not os.path.exists(dir_path) or not os.path.isdir(dir_path):
+            return {"error": f"ID '{id}' does not exist."}
+
+        # Load known faces for the given ID
+        load_known_faces(id)
+
+        # Read uploaded image
+        contents = await file.read()
+
+        # Convert to numpy array
+        nparr = np.frombuffer(contents, np.uint8)
+        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+        if image is None:
+            return {"error": "Could not decode image"}
+
+        # Convert BGR to RGB
+        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+        # Find faces in the image
+        face_locations = face_recognition.face_locations(rgb_image)
+        face_encodings = face_recognition.face_encodings(rgb_image, face_locations)
+
+        detected_faces = []
+
+        for face_encoding in face_encodings:
+            # Compare with known faces
+            matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
+            face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+
+            name = "Unknown"
+            confidence = 0.0
+
+            if True in matches:
+                best_match_index = np.argmin(face_distances)
+                if matches[best_match_index]:
+                    name = known_face_names[best_match_index]
+                    # Convert distance to confidence (lower distance = higher confidence)
+                    confidence = 1.0 - face_distances[best_match_index]
+
+            detected_faces.append({
+                "name": name,
+                "confidence": float(confidence)
+            })
+
+        # Return only the face with highest confidence
+        if not detected_faces:
+            return {"matched": None}
+
+        best_face = max(detected_faces, key=lambda x: x["confidence"])
+        if best_face["confidence"] == 0.0:
+            return {"matched": None}
+
+        return {"matched": best_face}
+
+    except Exception as e:
+        return {"error": f"Processing error: {str(e)}"}
+    
+    finally:
+        known_face_encodings = []
+        known_face_names = []
+
 @app.get("/reload-faces")
 async def reload_faces():
     """Endpoint to reload known faces from images directory"""
@@ -135,4 +209,4 @@ async def reload_faces():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=80)
+    uvicorn.run(app, host="0.0.0.0", port=8080)
