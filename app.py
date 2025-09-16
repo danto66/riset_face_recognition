@@ -179,13 +179,25 @@ async def recognize_face_by_id(id: str, file: UploadFile = File(...)):
 
         # Return only the face with highest confidence
         if not detected_faces:
-            return {"matched": None}
+            return {
+                "matched": False,
+                "name": "",
+                "confidence": 0.0
+            }
 
         best_face = max(detected_faces, key=lambda x: x["confidence"])
         if best_face["confidence"] == 0.0:
-            return {"matched": None}
+            return {
+                "matched": False,
+                "name": "",
+                "confidence": 0.0
+            }
 
-        return {"matched": best_face}
+        return {
+            "matched": True,
+            "name": best_face["name"],
+            "confidence": best_face["confidence"]
+        }
 
     except Exception as e:
         return {"error": f"Processing error: {str(e)}"}
