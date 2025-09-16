@@ -30,8 +30,18 @@ async function captureAndSubmit() {
         return;
     }
 
+    // Get user ID from input field
+    const userIdInput = document.getElementById('userId');
+    const userId = userIdInput.value.trim();
+
+    if (!userId) {
+        showResult('error', 'Please enter a User ID');
+        userIdInput.focus();
+        return;
+    }
+
     setButtonState(true, 'Processing...');
-    showResult('info', 'Processing frame...');
+    showResult('info', `🔄 Processing frame for ID "${userId}"...`);
 
     try {
         // Draw current video frame to canvas
@@ -43,7 +53,7 @@ async function captureAndSubmit() {
             formData.append('file', blob, 'frame.jpg');
 
             try {
-                const response = await fetch('/recognize', {
+                const response = await fetch(`/recognize/${userId}`, {
                     method: 'POST',
                     body: formData
                 });
@@ -51,13 +61,13 @@ async function captureAndSubmit() {
                 const data = await response.json();
 
                 if (response.ok) {
-                    if (data.faces && data.faces.length > 0) {
-                        displayRecognitionResults(data.faces);
+                    if (data.matched) {
+                        showResult('success', `✅ ${JSON.stringify(data)}`);
                     } else {
-                        showResult('info', 'No known faces detected in the frame');
+                        showResult('error', `❌ ${JSON.stringify(data)}`);
                     }
                 } else {
-                    showResult('error', `Error: ${data.detail || data.error || 'Unknown error'}`);
+                    showResult('error', `❌ Recognition failed for ID "${userId}": ${data.detail || data.error || 'Unknown error'}`);
                 }
             } catch (error) {
                 showResult('error', `Network error: ${error.message}`);
@@ -80,11 +90,11 @@ function displayRecognitionResults(faces) {
         const confidence = (face.confidence * 100).toFixed(1);
         const confidenceClass = face.confidence > 0.6 ? 'high-confidence' : 'low-confidence';
 
-        resultHtml += `<div class="face-result ${confidenceClass}">`;
+    resultHtml += `<div class="face-result ${confidenceClass}">`;
         resultHtml += `<strong>${index + 1}. ${face.name}</strong><br>`;
-        resultHtml += `Confidence: ${confidence}% `;
+    resultHtml += `Confidence: ${confidence}% `;
         resultHtml += face.confidence > 0.6 ? '✅' : '⚠️';
-        resultHtml += `</div>`;
+    resultHtml += `</div>`;
 
         if (index < faces.length - 1) {
             resultHtml += '<br>';
@@ -141,19 +151,19 @@ function updateKnownFacesDisplay(names) {
 }
 
 // Handle keyboard shortcuts
-document.addEventListener('keydown', function(event) {
-    // Space or Enter to capture frame
-    if ((event.code === 'Space' || event.code === 'Enter') && !submitBtn.disabled) {
-        event.preventDefault();
-        captureAndSubmit();
-    }
+// document.addEventListener('keydown', function(event) {
+//     // Space or Enter to capture frame
+//     if ((event.code === 'Space' || event.code === 'Enter') && !submitBtn.disabled) {
+//         event.preventDefault();
+//         captureAndSubmit();
+//     }
 
-    // R key to reload faces
-    if (event.code === 'KeyR' && event.ctrlKey) {
-        event.preventDefault();
-        reloadFaces();
-    }
-});
+//     // R key to reload faces
+//     if (event.code === 'KeyR' && event.ctrlKey) {
+//         event.preventDefault();
+//         reloadFaces();
+//     }
+// });
 
 // Add visual feedback for camera status
 video.addEventListener('loadedmetadata', function() {
