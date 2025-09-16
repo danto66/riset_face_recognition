@@ -35,23 +35,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements or install dependencies directly
-COPY requirements.txt* ./
+COPY requirements.txt ./
 
 # Install Python dependencies
 # If no requirements.txt exists, install the main dependencies
-RUN if [ -f requirements.txt ]; then \
-        pip install --no-cache-dir -r requirements.txt; \
-    else \
-        pip install --no-cache-dir \
-            face-recognition==1.3.0 \
-            opencv-python==4.10.0.84 \
-            dlib==19.24.2 \
-            numpy==1.24.3 \
-            fastapi==0.104.1 \
-            uvicorn==0.24.0 \
-            python-multipart==0.0.6 \
-            jinja2==3.1.2; \
-    fi
+RUN pip install --no-cache-dir -r requirements.txt; \
 
 # Copy application files
 COPY . .
@@ -60,7 +48,7 @@ COPY . .
 RUN mkdir -p images
 
 # Expose port for FastAPI application
-EXPOSE 8000
+EXPOSE 80
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
