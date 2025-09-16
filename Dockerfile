@@ -39,7 +39,7 @@ COPY requirements.txt ./
 
 # Install Python dependencies
 # If no requirements.txt exists, install the main dependencies
-RUN pip install --no-cache-dir -r requirements.txt; \
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application files
 COPY . .
